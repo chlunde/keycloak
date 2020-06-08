@@ -17,8 +17,14 @@
 
 package org.keycloak.social.microsoft;
 
+import java.util.stream.StreamSupport;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import org.jboss.logging.Logger;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.io.IOException;
+import java.util.Spliterators;
 import org.keycloak.broker.oidc.AbstractOAuth2IdentityProvider;
 import org.keycloak.broker.oidc.OAuth2IdentityProviderConfig;
 import org.keycloak.broker.oidc.mappers.AbstractJsonUserAttributeMapper;
@@ -46,6 +52,8 @@ public class MicrosoftIdentityProvider extends AbstractOAuth2IdentityProvider im
     public static final String AUTH_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"; // authorization code endpoint
     public static final String TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token"; // token endpoint
     public static final String PROFILE_URL = "https://graph.microsoft.com/v1.0/me/"; // user profile service endpoint
+    public static final String MEMBER_OF_URL = "https://graph.microsoft.com/v1.0/me/transitiveMemberOf"; // Get groups, directory roles that the user is a member of.
+
     public static final String DEFAULT_SCOPE = "User.read"; // the User.read scope should be sufficient to obtain all necessary user info
 
     public MicrosoftIdentityProvider(KeycloakSession session, OAuth2IdentityProviderConfig config) {
@@ -65,11 +73,32 @@ public class MicrosoftIdentityProvider extends AbstractOAuth2IdentityProvider im
         return PROFILE_URL;
     }
 
+    private JsonNode fetchProfile(String accessToken) throws IOException {
+        return SimpleHttp.doGet(PROFILE_URL, session).auth(accessToken).asJson();
+    }
+
+    private JsonNode fetchGroups(String accessToken) throws IOException {
+        return SimpleHttp.doGet(MEMBER_OF_URL, session).auth(accessToken).asJson();
+    }
+
+    public List<String> extractGroups(JsonNode groupResponse) {
+        // https://docs.microsoft.com/en-us/graph/api/user-list-transitivememberof?view=graph-rest-1.0&tabs=http
+        JsonNode groupNodes = groupResponse.get("value");
+        List<String> groups = StreamSupport.stream(Spliterators.spliteratorUnknownSize(groupNodes.elements(), 0), false)
+                .map(jsonNode -> getJsonProperty(jsonNode, "displayName"))
+                .collect(Collectors.toList());
+		return groups;
+    }
+
     @Override
     protected BrokeredIdentityContext doGetFederatedIdentity(String accessToken) {
         try {
-            JsonNode profile = SimpleHttp.doGet(PROFILE_URL, session).auth(accessToken).asJson();
-            return extractIdentityFromProfile(null, profile);
+            JsonNode profile = fetchProfile(accessToken);
+            BrokeredIdentityContext identity = extractIdentityFromProfile(null, profile);
+
+            JsonNode groupsResponse = fetchGroups(accessToken);
+            identity.setUserAttribute("groups", extractGroups(groupsResponse));
+            return identity;
         } catch (Exception e) {
             throw new IdentityBrokerException("Could not obtain user profile from Microsoft Graph", e);
         }

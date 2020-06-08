@@ -1,0 +1,24 @@
+{
+  "value": [
+    {
+      "@odata.type": "#microsoft.graph.group",
+      "id": "id-value",
+      "createdDateTime": null,
+      "description": "All users at the company",
+      "displayName": "All Users",
+      "groupTypes": [],
+      "mailEnabled": false,
+      "securityEnabled": true
+    },
+    {
+      "@odata.type": "#microsoft.graph.group",
+      "id": "id2-value",
+      "createdDateTime": null,
+      "description": "Developers",
+      "displayName": "Developers",
+      "groupTypes": [],
+      "mailEnabled": false,
+      "securityEnabled": true
+    }
+  ]
+}
