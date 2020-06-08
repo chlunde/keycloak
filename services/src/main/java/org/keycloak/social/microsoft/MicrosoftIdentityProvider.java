@@ -32,10 +32,12 @@ import org.keycloak.broker.provider.BrokeredIdentityContext;
 import org.keycloak.broker.provider.IdentityBrokerException;
 import org.keycloak.broker.provider.util.SimpleHttp;
 import org.keycloak.broker.social.SocialIdentityProvider;
-
+import org.keycloak.models.Constants;
 import org.keycloak.events.EventBuilder;
 import org.keycloak.models.KeycloakSession;
-
+import org.keycloak.models.UserModel;
+import org.keycloak.models.RealmModel;
+import org.keycloak.models.IdentityProviderMapperModel;
 import org.keycloak.services.validation.Validation;
 
 /**
@@ -131,6 +133,14 @@ public class MicrosoftIdentityProvider extends AbstractOAuth2IdentityProvider im
 
         AbstractJsonUserAttributeMapper.storeUserProfileForMapper(user, profile, getConfig().getAlias());
         return user;
+    }
+
+    @Override
+    public void updateBrokeredUser(KeycloakSession session, RealmModel realm, UserModel user, IdentityProviderMapperModel mapperModel, BrokeredIdentityContext context) {
+        List<String> userAttribute = (List<String>) context.getContextData().get(Constants.USER_ATTRIBUTES_PREFIX + "groups");
+        if (userAttribute != null) {
+            user.setAttribute("groups", userAttribute);
+        }
     }
 
     @Override
