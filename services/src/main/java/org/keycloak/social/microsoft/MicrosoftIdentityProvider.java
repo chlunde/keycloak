@@ -137,10 +137,14 @@ public class MicrosoftIdentityProvider extends AbstractOAuth2IdentityProvider im
 
     @Override
     public void updateBrokeredUser(KeycloakSession session, RealmModel realm, UserModel user, IdentityProviderMapperModel mapperModel, BrokeredIdentityContext context) {
+        log.info("UpdateBrokeredUser");
         List<String> userAttribute = (List<String>) context.getContextData().get(Constants.USER_ATTRIBUTES_PREFIX + "groups");
         if (userAttribute != null) {
+            log.info(userAttribute.toString());
+            log.info(userAttribute.size());
             user.setAttribute("groups", userAttribute);
         }
+        log.info(user.toString());
     }
 
     @Override
