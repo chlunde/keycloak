@@ -78,15 +78,19 @@ public class MicrosoftIdentityProvider extends AbstractOAuth2IdentityProvider im
     }
 
     private JsonNode fetchGroups(String accessToken) throws IOException {
+        log.info(SimpleHttp.doGet(MEMBER_OF_URL, session).auth(accessToken).acceptJson().asString());
         return SimpleHttp.doGet(MEMBER_OF_URL, session).auth(accessToken).asJson();
     }
 
     public List<String> extractGroups(JsonNode groupResponse) {
         // https://docs.microsoft.com/en-us/graph/api/user-list-transitivememberof?view=graph-rest-1.0&tabs=http
         JsonNode groupNodes = groupResponse.get("value");
+        StreamSupport.stream(Spliterators.spliteratorUnknownSize(groupNodes.elements(), 0), false)
+                .forEach(jsonNode -> System.out.println(jsonNode.toString()));
         List<String> groups = StreamSupport.stream(Spliterators.spliteratorUnknownSize(groupNodes.elements(), 0), false)
                 .map(jsonNode -> getJsonProperty(jsonNode, "displayName"))
                 .collect(Collectors.toList());
+        log.info(groups.toString());
 		return groups;
     }
 
@@ -97,6 +101,7 @@ public class MicrosoftIdentityProvider extends AbstractOAuth2IdentityProvider im
             BrokeredIdentityContext identity = extractIdentityFromProfile(null, profile);
 
             JsonNode groupsResponse = fetchGroups(accessToken);
+            log.info(groupsResponse.asText());
             identity.setUserAttribute("groups", extractGroups(groupsResponse));
             return identity;
         } catch (Exception e) {
